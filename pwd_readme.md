@@ -30,14 +30,26 @@ In this lab we'll use a Docker EE cluster comprised of Windows and Linux nodes. 
 >   * [Task 4.3: Verify the Running Application](#task4.3)
 > * [Task 5: Application Lifecycle Management](#Task5)
 >   * [Task 5.1: Upgrading the Web Front-end](#Task5.1)
->   * [Task 5.2: Scaling the Web Front-end](#Task 5.2)
+>   * [Task 5.2: Scaling the Web Front-end](#Task5.2)
 >   * [Task 5.3: Dealing with an Application Failure](#Task5.3)
 
-## Understanding the Play With Docker Interface
+## Understanding the Play With Docker Interface and Lab Environment
+
+This lab makes use of a three node Docker EE cluster. The cluster is comprised of two Linux nodes and one Windows Server node. 
+
+* The first Linux node acts as our Universal Control Plane (UCP) manager node (also referred to as the UCP server). 
+	
+* The second Linux node serves two purposes. It's a UCP worker node, and it also hosts Docker Trusted Registry (DTR) server. 
+	
+* The Windows Server node is deployed as a worker node in our cluster. 
+
+All of this is presented via a web-based learning environment, Play with Docker (PWD). 
+
+> **Note**: PWD is not part of Docker Enterprise Edition. It's a web framework for hosting Docker instances for use in training activities. 
 
 ![](./images/pwd_screen.png)
 
-There are three main components to the Play With Docker (PWD) interface
+There are three main components to the PWD interface
 
 ### 1. Console Access
 Play with Docker provides access to the 3 Docker EE hosts in your Cluster. These machines are:
@@ -71,6 +83,19 @@ Throughout the lab you will be asked to provide either hosntnames or login crede
 
 	![](./images/windows75.png)
 
+## Environment Variables
+Environment variables have been set on each of your cluster hosts to make the lab easier to navigate. 
+
+The variables are as follows:
+
+* `$UCP_HOST` = The fully qualified domain name (FQDN) of your UCP server
+* `$DTR_HOST` = The FQDN of your DTR server
+* `$WIN_HOST` = The FQDN of your Windows host
+* `$USER` = Your user name for these labs
+
+As noted above the actual values for each of these variables is also displayed in the PWD interface. 
+
+
 ## <a name="task1"></a>Task 1: Configure the Docker EE Cluster
 
 The Play with Docker (PWD) environment is almost completely setup, but before we can begin the labs we need to do two more steps. First we'll add a Windows node to the cluster, and then we'll create two repositories on the DTR server.
@@ -98,7 +123,7 @@ Let's start by adding our 3rd node to the cluster, a Windows Server 2016 worker 
 	> In a production environment you would use certs from a trusted certificate authority and would not see this screen.
 	> ![](./images/ssl_error.png)
 
-2. When prompted enter your username and password (these can be found below the console window in the main PWD screen). The UCP web interface should load up in your web browser.
+2. When prompted enter your username and password (these can be found on the left hand side of the PWD screen). The UCP web interface should load up in your web browser.
 
 	> **Note**: Once the main UCP screen loads you'll notice there is a red warning bar displayed at the top of the UCP screen, this is an artifact of running in a lab environment. A UCP server configured for a production environment would not display this warning
 	>
@@ -115,13 +140,13 @@ Let's start by adding our 3rd node to the cluster, a Windows Server 2016 worker 
 	> ![](./images/join_text.png)
 
 
-	> **Note**: You may notice that there is a UI component to select `Linux` or `Windows`on the `Add Node` screen. In a production environment where you are starting from scratch there are [a few prerequisite steps] to adding a Windows node. However, we've already done these steps in the PWD envrionemnt. So for this lab, just leave the selecton on `Linux` and move on to step 2
+	> **Note**: You may notice that there is a UI component to select `Linux` or `Windows`on the `Add Node` screen. In a production environment where you are starting from scratch there are [a few prerequisite steps] to adding a Windows node. However, we've already done these steps in the PWD envrionemnt. So for this lab, just leave the selecton on `Linux` and follow the instructions below. 
 
 
 
 ![](./images/windows75.png)
 
-6. Switch back to the PWD interface, and click the name of your Windows node. This will connect the web-based console to your Windows Server 2016 Docker EE host.
+6. Switch back to the PWD interface, and click the name of your Windows node (the name should be in the form of `winxxxx` where x is a random set of characters). This will connect the web-based console to your Windows Server 2016 Docker EE host.
 
 7. Paste the text from Step 4 at the command prompt in the Windows console.
 
@@ -141,7 +166,7 @@ Congratulations on adding a Windows node to your UCP cluster. Next up we'll crea
 
 Docker Trusted Registry is a special server designed to store and manage your Docker images. In this lab we're going to create a couple of different Docker images, and push them to DTR. But before we can do that we need to setup respositories in which those images will reside.
 
-1. In the PWD web interface click the `DTR` button on the left side of the scree.
+1. In the PWD web interface click the `DTR` button on the left side of the screen.
 
 	> **Note**: As with UCP before, DTR is also using self-signed certs. It's safe to click through any browser warning you might encoutner.
 
@@ -203,11 +228,9 @@ Let's start with the Linux version.
 
 2. Use `docker build` to build your Linux tweet web app Docker image.
 
-	`$ docker build -t <dtr hostname>/<your user name>/linux_tweet_app .`
+	`$ docker build -t $DTR_HOST/$USER/linux_tweet_app .`
 
-	> **Note**: Be sure to substitute your DTR Hostname and your User Name - both these are listed at the top of your PWD page.
-
-	The `-t` tags the iamge with a name. In our case the name indicates which DTR server and under which user's respository the image will live.
+	The `-t` tags the image with a name. In our case the name indicates which DTR server and under which user's respository the image will live.
 
 	> **Note**: Feel free to examine the Dockerfile in this directory if you'd like to see how the image is being built.
 
@@ -235,13 +258,13 @@ Let's start with the Linux version.
 	 ---> ed5f550fc339
 	Removing intermediate container 54020cdec942
 	Successfully built ed5f550fc339
-	Successfully tagged  <dtr hostname>/<your user name>/linux_tweet_app:latest
+	Successfully tagged  $DTR_HOST/$USER/linux_tweet_app:latest
 	```
 
 3. Log into your DTR server from the command line
 
 	```
-	$ docker login <dtr hostname>
+	$ docker login $DTR_HOST
 	Username: <your username>
 	Password: <your password>
 	Login Succeeded
@@ -249,13 +272,13 @@ Let's start with the Linux version.
 4. Use `docker push` to upload your image up to Docker Trusted Registry.
 
 	```
-	$ docker push <dtr hostname>/<your user name>/linux_tweet_app
+	$ docker push $DTR_HOST/$USER/linux_tweet_app
 	```
 
 	The output should be similar to the following:
 
 	```
-	The push refers to a repository [<dtr hostname>/<your user name>/linux_tweet_app]
+	The push refers to a repository [$DTR_HOST/$USER/linux_tweet_app]
 	feecabd76a78: Pushed
 	3c749ee6d1f5: Pushed
 	af5bd3938f60: Pushed
@@ -286,7 +309,9 @@ Services are application building blocks (although in many cases an application 
 
 4. Enter `linux_tweet_app` for the name.
 
-4. Under `Image` enter the path to your image which should be `<dtr hostname>/<your user name>/linux_tweet_app`
+4. Under `Image` enter the path to your image which should be `<DTR hostname>/<your username>/linux_tweet_app`
+
+	> **Note**: You can copy the full image path from the output of your `docker push` command
 
 8. From the left hand menu click `Network`
 
@@ -318,7 +343,7 @@ After a few seconds you should see a green dot next to your service name. Once y
 
 	If it's the worker node, how did your web browser find it when we pointed at the UCP Manager node?
 
-4. Point your browser at `http://<DTR hostname>:8088`. Did the site come up?
+4. Point your browser at `http://<dtr hostname>:8088`. Did the site come up?
 
 	In the end it doesn't matter if we try and access the service via the manager or the worker, Docker EE will route the request correctly.
 
@@ -374,14 +399,14 @@ When the process completes you'll find a dockerfile in `c:\windowstweetapp`
 
 2. Use `docker build` to build your Windows tweet web app Docker image.
 
-	`$ docker build -t <dtr hostname>/<your user name>/windows_tweet_app .`
+	`$ docker build -t $DTR_HOST/$USER/windows_tweet_app .`
 
 	> **Note**: Feel free to examine the Dockerfile in this directory if you'd like to see how the image is being built.
 
 	Your output should be similar to what is shown below
 
 	```
-	PS C:\windowstweetapp> docker build -t <dtr hostname>/<your user name>/windows_tweet_app .
+	PS C:\windowstweetapp> docker build -t $DTR_HOST/$USER/windows_tweet_app .
 
 	Sending build context to Docker daemon  6.144kB
 	Step 1/10 : FROM microsoft/windowsservercore
@@ -395,14 +420,14 @@ When the process completes you'll find a dockerfile in `c:\windowstweetapp`
 	 ---> d74eead7f408
 	Removing intermediate container ab4dfee81c7e
 	Successfully built d74eead7f408
-	Successfully tagged <dtr hostname>/<your user name>/windows_tweet_app:latest
+	Successfully tagged $DTR_HOST/$USER/windows_tweet_app:latest
 	```
 	> **Note**: It will take sevearl minutes for your image to build.
 
 4. Log into Docker Trusted Registry
 
 	```
-	PS C:\> docker login <dtr hostname>
+	PS C:\> docker login $DTR_HOST
 	Username: <your username>
 	Password: <your password>
 	Login Succeeded
@@ -411,8 +436,9 @@ When the process completes you'll find a dockerfile in `c:\windowstweetapp`
 5. Push your new image up to Docker Trusted Registry.
 
 	```
-	PS C:\Users\docker> docker push <dtr hostname>/<your username>/windows_tweet_app
-	The push refers to a repository [<dtr hostname>/<your username>/windows_tweet_app]
+	PS C:\Users\docker> docker push <DTR hostname>/<your username>/windows_tweet_app
+	
+	The push refers to a repository [$DTR_HOST/<your username>/windows_tweet_app]
 	5d08bc106d91: Pushed
 	74b0331584ac: Pushed
 	e95704c2f7ac: Pushed
@@ -439,6 +465,8 @@ Now that we have our Windows Tweet App up on the DTR server, let's deploy it. It
 4. Enter `windows_tweet_app` for the name.
 
 4. Under `Image` enter the path to your image which should be `<dtr hostname>/<your username>/windows_tweet_app`
+
+	> **Note**: You can copy the image path from the output of your `docker push` command. 
 
 8. From the left hand menu click `Network`
 
@@ -499,7 +527,7 @@ There are two services. `appserver` is our web frontend written in Java, and `da
 
 One thing that is new is the creation of an overlay network (`atsea`). Overlay networks allow containers running on different hosts to communicate over a private software-defined network. In this case, the web frontend on our Linux host will use the `atsea` network to communicate with the database.
 
-### <a name="task4.2"></a> Taks 4.2 Deploy the Application Stack
+### <a name="task4.2"></a> Task 4.2 Deploy the Application Stack
 
 A `stack` is a group of related services that make up an application. Stacks are a newer Docker primative, and can be deployed with a Docker Compose file.
 
